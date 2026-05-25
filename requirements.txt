@@ -1,0 +1,7 @@
+fastapi==0.115.6
+uvicorn==0.34.0
+yfinance==0.2.54
+akshare==1.16.72
+openai==1.66.3
+supabase==2.13.0
+python-dotenv==1.0.1
