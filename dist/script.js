@@ -1,10 +1,12 @@
 const input = document.getElementById("stockInput");
 const btn = document.getElementById("searchBtn");
+const demoBtn = document.getElementById("demoBtn");
 const loading = document.getElementById("loading");
 const error = document.getElementById("error");
 const result = document.getElementById("result");
 
 btn.addEventListener("click", analyze);
+demoBtn.addEventListener("click", loadDemo);
 input.addEventListener("keydown", (e) => {
   if (e.key === "Enter") analyze();
 });
@@ -17,6 +19,7 @@ async function analyze() {
   error.classList.add("hidden");
   result.classList.add("hidden");
   btn.disabled = true;
+  demoBtn.disabled = true;
 
   try {
     const resp = await fetch(`/api/stock/${encodeURIComponent(code)}`);
@@ -32,6 +35,29 @@ async function analyze() {
   } finally {
     loading.classList.add("hidden");
     btn.disabled = false;
+    demoBtn.disabled = false;
+  }
+}
+
+async function loadDemo() {
+  loading.classList.remove("hidden");
+  error.classList.add("hidden");
+  result.classList.add("hidden");
+  btn.disabled = true;
+  demoBtn.disabled = true;
+
+  try {
+    const resp = await fetch("/api/demo");
+    if (!resp.ok) throw new Error("演示请求失败");
+    const data = await resp.json();
+    render(data);
+  } catch (e) {
+    error.textContent = e.message;
+    error.classList.remove("hidden");
+  } finally {
+    loading.classList.add("hidden");
+    btn.disabled = false;
+    demoBtn.disabled = false;
   }
 }
 

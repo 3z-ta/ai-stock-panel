@@ -177,6 +177,28 @@ async def get_stock(code: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/demo")
+async def demo():
+    """Demo endpoint with sample data to showcase full AI analysis flow."""
+    stock_data = {
+        "code": "AAPL",
+        "name": "Apple Inc.",
+        "price": 192.58,
+        "change_pct": 2.35,
+        "volume": 62300000,
+        "high_52w": 199.62,
+        "low_52w": 143.90,
+        "market": "US (Demo)",
+    }
+    analysis = analyze_stock(stock_data)
+    await save_analysis(stock_data, analysis)
+    return {
+        "stock_data": stock_data,
+        "analysis": analysis,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+
+
 @app.get("/api/health")
 async def health():
     return {"status": "ok"}

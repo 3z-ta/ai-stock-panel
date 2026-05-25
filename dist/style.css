@@ -89,6 +89,11 @@ header h1 {
   cursor: not-allowed;
 }
 
+.demo-btn {
+  background: linear-gradient(135deg, #22c55e, #10b981) !important;
+  margin-top: 0.5rem !important;
+}
+
 .market-hints {
   display: flex;
   gap: 1rem;
