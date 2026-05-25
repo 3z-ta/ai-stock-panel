@@ -1,15 +1,15 @@
 import os
 import re
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 
 import yfinance as yf
 import akshare as ak
+import httpx
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from openai import OpenAI
-from supabase import create_client
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -33,12 +33,9 @@ if deepseek_api_key:
         base_url=os.getenv("OPENAI_BASE_URL", "https://api.deepseek.com"),
     )
 
-# Supabase client (only if configured)
+# Supabase config
 supabase_url = os.getenv("SUPABASE_URL", "")
 supabase_key = os.getenv("SUPABASE_KEY", "")
-supabase = None
-if supabase_url and supabase_key:
-    supabase = create_client(supabase_url, supabase_key)
 
 SYSTEM_PROMPT = """你是一个专业的股票分析师。用户会提供一支股票的实时行情数据，你需要根据这些数据给出简明的分析结论。
 你必须严格返回一个 JSON 对象，格式如下：
@@ -131,16 +128,28 @@ def analyze_stock(stock_data: dict) -> dict:
     return extract_json(raw)
 
 
-def save_analysis(stock_data: dict, analysis: dict):
-    if not supabase:
+async def save_analysis(stock_data: dict, analysis: dict):
+    if not supabase_url or not supabase_key:
         return
     try:
-        supabase.table("stock_analyses").insert({
+        headers = {
+            "apikey": supabase_key,
+            "Authorization": f"Bearer {supabase_key}",
+            "Content-Type": "application/json",
+            "Prefer": "return=minimal",
+        }
+        payload = {
             "stock_code": stock_data["code"],
-            "stock_data": json.dumps(stock_data, default=str),
-            "analysis": json.dumps(analysis, default=str),
-            "created_at": datetime.utcnow().isoformat(),
-        }).execute()
+            "stock_data": stock_data,
+            "analysis": analysis,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        async with httpx.AsyncClient(timeout=10) as client:
+            await client.post(
+                f"{supabase_url}/rest/v1/stock_analyses",
+                headers=headers,
+                json=payload,
+            )
     except Exception:
         pass  # non-critical
 
@@ -155,12 +164,12 @@ async def get_stock(code: str):
             stock_data = fetch_a_stock(code)
 
         analysis = analyze_stock(stock_data)
-        save_analysis(stock_data, analysis)
+        await save_analysis(stock_data, analysis)
 
         return {
             "stock_data": stock_data,
             "analysis": analysis,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
