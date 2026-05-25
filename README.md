@@ -2,7 +2,7 @@
 
 实时股票行情 + DeepSeek AI 智能分析，支持美股和 A 股。
 
-在线访问: https://ai-stock-panel.onrender.com
+在线访问: https://ai-stock-panel-production.up.railway.app
 
 ## 功能
 
@@ -81,22 +81,18 @@ CREATE TABLE stock_analyses (
 );
 ```
 
-## Render.com 部署步骤
+## Railway 部署
 
 1. 将项目推送到 GitHub 仓库
-2. 在 Render.com 创建 Web Service，连接仓库
-3. 配置：
-   - **Build Command**: `pip install -r requirements.txt`
-   - **Start Command**: `uvicorn app:app --host 0.0.0.0 --port 10000`
-   - **Runtime**: Python 3.11+
-4. 添加环境变量：
+2. 在 Railway.com 用 GitHub 登录
+3. New Project → Deploy from GitHub repo → 选择仓库
+4. Railway 自动识别 `railway.toml` 配置
+5. 在 Variables 中添加环境变量：
    - `DEEPSEEK_API_KEY` — DeepSeek API 密钥
    - `OPENAI_BASE_URL` — https://api.deepseek.com
    - `SUPABASE_URL` — Supabase 项目 URL
    - `SUPABASE_KEY` — Supabase 匿名密钥
-5. 部署完成后通过 Render 提供的域名访问
-
-> 注意: Render 免费实例在 15 分钟无请求后会休眠，首次访问需等待 30-60 秒唤醒。
+6. 添加变量后自动重新部署，通过 `xxx.up.railway.app` 访问
 
 ## 技术栈
 
