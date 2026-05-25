@@ -3,7 +3,6 @@ import re
 import json
 from datetime import datetime, timezone
 
-import yfinance as yf
 import akshare as ak
 import httpx
 from fastapi import FastAPI, HTTPException
@@ -67,17 +66,32 @@ def detect_market(code: str) -> str:
 
 
 def fetch_us_stock(code: str) -> dict:
-    ticker = yf.Ticker(code)
-    info = ticker.info
-    fast = ticker.fast_info
+    """Fetch US stock data via Yahoo Finance chart API (no API key required)."""
+    symbol = code.upper().strip()
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
+    params = {"range": "5d", "interval": "1d", "includePrePost": "false"}
+    with httpx.Client(timeout=15) as client:
+        resp = client.get(url, params=params, headers={
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        })
+        if resp.status_code != 200:
+            raise ValueError(f"Yahoo Finance returned {resp.status_code}")
+        data = resp.json()
+    r = data["chart"]["result"][0]
+    meta = r["meta"]
+    quotes = r["indicators"]["quote"][0]
+    closes = [x for x in quotes["close"] if x is not None]
+    price = meta.get("regularMarketPrice") or (float(closes[-1]) if closes else None)
+    prev = meta.get("previousClose") or (float(closes[-2]) if len(closes) >= 2 else price)
+    change_pct = round((price - prev) / prev * 100, 2) if price and prev else None
     return {
-        "code": code,
-        "name": info.get("shortName", code),
-        "price": getattr(fast, "last_price", None) or info.get("currentPrice"),
-        "change_pct": info.get("regularMarketChangePercent"),
-        "volume": info.get("regularMarketVolume"),
-        "high_52w": info.get("fiftyTwoWeekHigh"),
-        "low_52w": info.get("fiftyTwoWeekLow"),
+        "code": symbol,
+        "name": meta.get("shortName") or meta.get("symbol") or symbol,
+        "price": round(float(price), 2) if price else None,
+        "change_pct": change_pct,
+        "volume": int(quotes["volume"][-1]) if quotes.get("volume") and quotes["volume"][-1] is not None else None,
+        "high_52w": meta.get("fiftyTwoWeekHigh"),
+        "low_52w": meta.get("fiftyTwoWeekLow"),
         "market": "US",
     }
 
